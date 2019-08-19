@@ -1,0 +1,31 @@
+{
+  "manifest_version": 2,
+  "name": "Уведомления",
+  "description": "Для разработчиков ПФР портала",
+  "version": "1.0.0",
+  "icons": {"128": "icons/icon_128.png"},
+  "browser_action": {
+    "default_icon": "icons/icon_128.png",
+    "default_popup": "popup/popup.html"
+  },
+  "background": {
+    "scripts": ["background.js"],
+    "persistent": false
+  },
+  "commands": {
+    "_execute_browser_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S"
+      },
+      "description": "Opens popup.html"
+    }
+  },
+  "options_page": "options/options.html",
+  "permissions": [
+    "cookies",
+    "tabs",
+    "alarms",
+    "notifications",
+    "storage"
+  ]
+}
