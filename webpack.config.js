@@ -77,7 +77,8 @@ const config = {
 
           if (config.mode === 'development') {
             jsonContent['content_security_policy'] =
-              'script-src "self" "unsafe-eval"; object-src "self"';
+              // eslint-disable-next-line
+              "script-src 'self' 'unsafe-eval'; object-src 'self'";
           }
 
           return JSON.stringify(jsonContent, null, 2);
