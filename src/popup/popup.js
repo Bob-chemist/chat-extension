@@ -2,6 +2,10 @@ let users = {};
 let me;
 chrome.storage.sync.get(['code'], result => {
   me = result.code;
+  chrome.runtime.sendMessage({
+    id: 'hi',
+    userId: me,
+  });
 });
 
 const messageInput = document.getElementById('m');
@@ -16,13 +20,9 @@ messageInput.addEventListener('keydown', function(event) {
   }
 });
 
-var port = chrome.runtime.connect({
-  name: 'Sample Communication',
-});
-port.postMessage('Hi BackGround');
+chrome.runtime.onMessage.addListener(messageReceived);
 
-//for listening any message which comes from runtime
-port.onMessage.addListener(function(msg) {
+function messageReceived(msg) {
   console.log(msg);
 
   switch (msg.id) {
@@ -43,7 +43,7 @@ port.onMessage.addListener(function(msg) {
     default:
       break;
   }
-});
+}
 
 const createUserList = userList => {
   const ul = document.getElementById('users-list'),
@@ -144,7 +144,7 @@ function send() {
       message: input.value,
       receiver,
     };
-  port.postMessage(message);
+  chrome.runtime.sendMessage(message);
   input.value = '';
   input.focus();
   message.id = new Date().getTime();

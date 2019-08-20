@@ -1,125 +1,101 @@
 /* -------------------------------------------------- */
-
 /*  Start of Webpack Chrome Hot Extension Middleware  */
-
 /* ================================================== */
-
 /*  This will be converted into a lodash templ., any  */
-
 /*  external argument must be provided using it       */
-
 /* -------------------------------------------------- */
 (function (chrome, window) {
-  var signals = JSON.parse('{"SIGN_CHANGE":"SIGN_CHANGE","SIGN_RELOAD":"SIGN_RELOAD","SIGN_RELOADED":"SIGN_RELOADED","SIGN_LOG":"SIGN_LOG","SIGN_CONNECT":"SIGN_CONNECT"}');
-  var config = JSON.parse('{"RECONNECT_INTERVAL":2000,"SOCKET_ERR_CODE_REF":"https://tools.ietf.org/html/rfc6455#section-7.4.1"}');
-  var reloadPage = "true" === "true";
-  var wsHost = "ws://localhost:9090";
-  var SIGN_CHANGE = signals.SIGN_CHANGE,
-      SIGN_RELOAD = signals.SIGN_RELOAD,
-      SIGN_RELOADED = signals.SIGN_RELOADED,
-      SIGN_LOG = signals.SIGN_LOG,
-      SIGN_CONNECT = signals.SIGN_CONNECT;
-  var RECONNECT_INTERVAL = config.RECONNECT_INTERVAL,
-      SOCKET_ERR_CODE_REF = config.SOCKET_ERR_CODE_REF;
-  var runtime = chrome.runtime,
-      tabs = chrome.tabs;
-  var manifest = runtime.getManifest(); // =============================== Helper functions ======================================= //
+    var signals = JSON.parse('{"SIGN_CHANGE":"SIGN_CHANGE","SIGN_RELOAD":"SIGN_RELOAD","SIGN_RELOADED":"SIGN_RELOADED","SIGN_LOG":"SIGN_LOG","SIGN_CONNECT":"SIGN_CONNECT"}');
+    var config = JSON.parse('{"RECONNECT_INTERVAL":2000,"SOCKET_ERR_CODE_REF":"https://tools.ietf.org/html/rfc6455#section-7.4.1"}');
+    var reloadPage = "true" === "true";
+    var wsHost = "ws://localhost:9090";
+    var SIGN_CHANGE = signals.SIGN_CHANGE,
+        SIGN_RELOAD = signals.SIGN_RELOAD,
+        SIGN_RELOADED = signals.SIGN_RELOADED,
+        SIGN_LOG = signals.SIGN_LOG,
+        SIGN_CONNECT = signals.SIGN_CONNECT;
+    var RECONNECT_INTERVAL = config.RECONNECT_INTERVAL,
+        SOCKET_ERR_CODE_REF = config.SOCKET_ERR_CODE_REF;
+    var runtime = chrome.runtime,
+        tabs = chrome.tabs;
 
-  var formatter = function formatter(msg) {
-    return "[ WCER: ".concat(msg, " ]");
-  };
-
-  var logger = function logger(msg) {
-    var level = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "info";
-    return console[level](formatter(msg));
-  };
-
-  var timeFormatter = function timeFormatter(date) {
-    return date.toTimeString().replace(/.*(\d{2}:\d{2}:\d{2}).*/, "$1");
-  }; // ========================== Called only on content scripts ============================== //
-
-
-  function contentScriptWorker() {
-    runtime.sendMessage({
-      type: SIGN_CONNECT
-    }, function (msg) {
-      return console.info(msg);
-    });
-    runtime.onMessage.addListener(function (_ref) {
-      var type = _ref.type,
-          payload = _ref.payload;
-
-      switch (type) {
-        case SIGN_RELOAD:
-          logger("Detected Changes. Reloading ...");
-          reloadPage && window.location.reload();
-          break;
-
-        case SIGN_LOG:
-          console.info(payload);
-          break;
-      }
-    });
-  } // ======================== Called only on background scripts ============================= //
-
-
-  function backgroundWorker(socket) {
-    runtime.onMessage.addListener(function (action, sender, sendResponse) {
-      if (action.type === SIGN_CONNECT) {
-        sendResponse(formatter("Connected to Chrome Extension Hot Reloader"));
-      }
-    });
-    socket.addEventListener("message", function (_ref2) {
-      var data = _ref2.data;
-
-      var _JSON$parse = JSON.parse(data),
-          type = _JSON$parse.type,
-          payload = _JSON$parse.payload;
-
-      if (type === SIGN_CHANGE) {
-        tabs.query({
-          status: "complete"
-        }, function (loadedTabs) {
-          loadedTabs.forEach(function (tab) {
-            return tab.id && tabs.sendMessage(tab.id, {
-              type: SIGN_RELOAD
-            });
-          });
-          socket.send(JSON.stringify({
-            type: SIGN_RELOADED,
-            payload: formatter("".concat(timeFormatter(new Date()), " - ").concat(manifest.name, " successfully reloaded"))
-          }));
-          runtime.reload();
+    var manifest = runtime.getManifest();
+    var formatter = function formatter(msg) {
+        return '[ WCER: ' + msg + ' ]';
+    };
+    var logger = function logger(msg) {
+        var level = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : "info";
+        return console[level](formatter(msg));
+    };
+    var timeFormatter = function timeFormatter(date) {
+        return date.toTimeString().replace(/.*(\d{2}:\d{2}:\d{2}).*/, "$1");
+    };
+    function contentScriptWorker() {
+        runtime.sendMessage({ type: SIGN_CONNECT }, function (msg) {
+            return console.info(msg);
         });
-      } else {
-        runtime.sendMessage({
-          type: type,
-          payload: payload
-        });
-      }
-    });
-    socket.addEventListener("close", function (_ref3) {
-      var code = _ref3.code;
-      logger("Socket connection closed. Code ".concat(code, ". See more in ").concat(SOCKET_ERR_CODE_REF), "warn");
-      var intId = setInterval(function () {
-        logger("Attempting to reconnect (tip: Check if Webpack is running)");
-        var ws = new WebSocket(wsHost);
-        ws.addEventListener("open", function () {
-          clearInterval(intId);
-          logger("Reconnected. Reloading plugin");
-          runtime.reload();
-        });
-      }, RECONNECT_INTERVAL);
-    });
-  } // ======================= Bootstraps the middleware =========================== //
+        runtime.onMessage.addListener(function (_ref) {
+            var type = _ref.type,
+                payload = _ref.payload;
 
+            switch (type) {
+                case SIGN_RELOAD:
+                    logger("Detected Changes. Reloading ...");
+                    reloadPage && window.location.reload();
+                    break;
+                case SIGN_LOG:
+                    console.info(payload);
+                    break;
+            }
+        });
+    }
+    function backgroundWorker(socket) {
+        runtime.onMessage.addListener(function (action, sender, sendResponse) {
+            if (action.type === SIGN_CONNECT) {
+                sendResponse(formatter("Connected to Chrome Extension Hot Reloader"));
+            }
+        });
+        socket.addEventListener("message", function (_ref2) {
+            var data = _ref2.data;
 
-  runtime.reload ? backgroundWorker(new WebSocket(wsHost)) : contentScriptWorker();
+            var _JSON$parse = JSON.parse(data),
+                type = _JSON$parse.type,
+                payload = _JSON$parse.payload;
+
+            if (type === SIGN_CHANGE) {
+                tabs.query({ status: "complete" }, function (loadedTabs) {
+                    loadedTabs.forEach(function (tab) {
+                        return tabs.sendMessage(tab.id, { type: SIGN_RELOAD });
+                    });
+                    socket.send(JSON.stringify({
+                        type: SIGN_RELOADED,
+                        payload: formatter(timeFormatter(new Date()) + ' - ' + manifest.name + ' successfully reloaded')
+                    }));
+                    runtime.reload();
+                });
+            } else {
+                runtime.sendMessage({ type: type, payload: payload });
+            }
+        });
+        socket.addEventListener("close", function (_ref3) {
+            var code = _ref3.code;
+
+            logger('Socket connection closed. Code ' + code + '. See more in ' + SOCKET_ERR_CODE_REF, "warn");
+            var intId = setInterval(function () {
+                logger("WEPR Attempting to reconnect ...");
+                var ws = new WebSocket(wsHost);
+                ws.addEventListener("open", function () {
+                    clearInterval(intId);
+                    logger("Reconnected. Reloading plugin");
+                    runtime.reload();
+                });
+            }, RECONNECT_INTERVAL);
+        });
+    }
+    runtime.reload ? backgroundWorker(new WebSocket(wsHost)) : contentScriptWorker();
 })(chrome, window);
 /* ----------------------------------------------- */
-
 /* End of Webpack Chrome Hot Extension Middleware  */
-
 /* ----------------------------------------------- *//******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache
 /******/ 	var installedModules = {};
@@ -747,7 +723,7 @@ eval("\n\nvar alphabet = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqr
 /***/ (function(module, __webpack_exports__, __webpack_require__) {
 
 "use strict";
-eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var socket_io_client__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! socket.io-client */ \"../node_modules/socket.io-client/lib/index.js\");\n/* harmony import */ var socket_io_client__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(socket_io_client__WEBPACK_IMPORTED_MODULE_0__);\nconst users = {};\nlet me;\nlet messages = [];\nchrome.storage.sync.get(['code'], result => {\n  me = result.code;\n}); //for sending a message\n\nconst sendToPopup = msg => chrome.runtime.sendMessage(msg);\n\n\nconst socket = socket_io_client__WEBPACK_IMPORTED_MODULE_0___default.a.connect('http://localhost:3000');\nsocket.on('connect', () => {\n  //При успешном соединении с сервером\n  console.info('Connected to server');\n  socket.emit('name', me);\n});\nsocket.on('userList', userList => {\n  userList.forEach(user => users[user.userid] = user);\n  socket.emit('userList loaded', me);\n});\nchrome.runtime.onConnect.addListener(function (port) {\n  port.onMessage.addListener(function (message) {\n    console.log(message);\n    port.postMessage({\n      id: 'userList',\n      userList: users\n    });\n    port.postMessage({\n      id: 'messageList',\n      messageList: messages\n    });\n\n    if (message.receiver) {\n      message.receiver !== '_chat' ? socket.emit('private message', message) : socket.emit('chat message', message);\n    }\n  });\n});\nsocket.on('private message', msg => {\n  messages = [...messages, ...msg];\n});\nsocket.on('chat message', msg => {\n  messages = [...messages, ...msg];\n});\nsocket.on('user connected', userId => {\n  if (userId === me) {\n    return;\n  }\n\n  sendToPopup({\n    id: 'connected',\n    userId\n  });\n});\nsocket.on('user disconnected', userId => {\n  if (userId === me) {\n    return;\n  }\n\n  sendToPopup({\n    id: 'disconnected',\n    userId\n  });\n});\nchrome.alarms.create('1min', {\n  // Повторяем код ниже каждую минуту\n  delayInMinutes: 1,\n  periodInMinutes: 1\n});\nchrome.alarms.onAlarm.addListener(function (alarm) {\n  if (alarm.name === '1min') {}\n});\nvar curDate = new Date();\n\nfunction showNotification(data) {\n  // показываем уведомление, состоящее их названия предмета и баллов\n  if (data.length > 1) {\n    data = data.map(m => {\n      return {\n        title: m.title,\n        message: m.message\n      };\n    });\n    chrome.notifications.create('reminder', {\n      type: 'list',\n      iconUrl: 'icon.png',\n      title: 'Новые сообщения',\n      items: data,\n      message: 'test',\n      requireInteraction: true\n    });\n  } else {\n    chrome.notifications.create('reminder', {\n      type: 'basic',\n      iconUrl: 'icon.png',\n      title: data[0].title,\n      message: data[0].message,\n      requireInteraction: true\n    });\n  }\n}\n\n//# sourceURL=webpack:///./background.js?");
+eval("__webpack_require__.r(__webpack_exports__);\n/* harmony import */ var socket_io_client__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! socket.io-client */ \"../node_modules/socket.io-client/lib/index.js\");\n/* harmony import */ var socket_io_client__WEBPACK_IMPORTED_MODULE_0___default = /*#__PURE__*/__webpack_require__.n(socket_io_client__WEBPACK_IMPORTED_MODULE_0__);\nconst users = {};\nlet me;\nlet messages = [];\nchrome.storage.sync.get(['code'], result => {\n  me = result.code;\n}); //for sending a message\n\nconst sendToPopup = msg => chrome.runtime.sendMessage(msg);\n\nchrome.runtime.onMessage.addListener(messageReceived);\n\nfunction messageReceived(message) {\n  if (message.receiver) {\n    message.receiver !== '_chat' ? socket.emit('private message', message) : socket.emit('chat message', message);\n  } else if (message.id === 'hi') {\n    socket.emit('user online', message.userId);\n    sendToPopup({\n      id: 'userList',\n      userList: users\n    });\n    sendToPopup({\n      id: 'messageList',\n      messageList: messages\n    });\n    messages = [];\n    chrome.browserAction.setBadgeText({\n      text: ''\n    });\n  }\n}\n\n\nconst socket = socket_io_client__WEBPACK_IMPORTED_MODULE_0___default.a.connect('http://localhost:3000');\nsocket.on('connect', () => {\n  //При успешном соединении с сервером\n  console.info('Connected to server');\n  socket.emit('name', me);\n});\nsocket.on('userList', userList => {\n  userList.forEach(user => users[user.userid] = user);\n  socket.emit('userList loaded', me);\n});\nsocket.on('unseen messages', msg => {\n  messages = [...messages, ...msg];\n  showNotification(msg);\n});\nsocket.on('private message', msg => {\n  messages = [...messages, ...msg];\n  console.log(messages);\n  sendToPopup({\n    id: 'messageList',\n    messageList: msg\n  }); // show(msg);\n});\nsocket.on('chat message', msg => {\n  messages = [...messages, ...msg];\n  console.log(messages);\n  sendToPopup({\n    id: 'messageList',\n    messageList: msg\n  }); // show(msg);\n});\nsocket.on('user connected', userId => {\n  if (userId === me) {\n    return;\n  }\n\n  console.log('user connected', userId);\n  sendToPopup({\n    id: 'connected',\n    userId\n  });\n});\nsocket.on('user disconnected', userId => {\n  if (userId === me) {\n    return;\n  }\n\n  console.log('user disconnected', userId);\n  sendToPopup({\n    id: 'disconnected',\n    userId\n  });\n}); // function show(msgs) {\n//   sendToPopup({ id: 'messageList', messageList: msgs });\n//   chrome.browserAction.setBadgeText({ text: messages.length.toString() });\n//   let msg = msgs[0];\n//   if (msg.author === me) {\n//     return;\n//   }\n//   let title = 'Новое сообщение от: ' + users[msg.author].name,\n//     body = msg.message;\n//   chrome.notifications.create('reminder', {\n//     type: 'basic',\n//     iconUrl: 'icons/icon_128.png',\n//     title,\n//     message: body,\n//     requireInteraction: true,\n//   });\n// }\n\nfunction showNotification(data) {\n  // показываем уведомление, состоящее их названия предмета и баллов\n  chrome.browserAction.setBadgeText({\n    text: messages.length.toString()\n  });\n\n  if (data.length > 1) {\n    let showData = data.map(msg => {\n      return {\n        title: users[msg.author].name,\n        message: msg.message\n      };\n    });\n    chrome.notifications.create('reminder', {\n      type: 'list',\n      iconUrl: './icons/icon_128.png',\n      title: 'Новые сообщения',\n      message: 'Срочно прочесть',\n      items: showData,\n      requireInteraction: true\n    });\n  } else {\n    let msg = data[0];\n\n    if (msg.author === me) {\n      return;\n    }\n\n    let title = 'Новое сообщение от: ' + users[msg.author].name,\n        body = msg.message;\n    chrome.notifications.create('reminder', {\n      type: 'basic',\n      iconUrl: './icons/icon_128.png',\n      title,\n      message: body,\n      requireInteraction: true\n    });\n  }\n}\n\n//# sourceURL=webpack:///./background.js?");
 
 /***/ }),
 
