@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
   <head>
     <meta charset="UTF-8" />
     <title>Настройки</title>
@@ -10,6 +10,16 @@
 
       <input type="text" id="code" />
     </div>
+    <div>
+        <label for="password" style="display: block">Пароль:</label>
+
+        <input type="text" id="password" />
+    </div>
+    <div>
+        <label for="new-password" style="display: block">Новый пароль:</label>
+
+        <input type="text" id="new-password" />
+    </div>
     <div style="margin-top: 20px;">
       <label for="ip" style="display: block">Подключиться к другому серверу</label>
       <span>http://</span><input type="text" name="ip" id="ip" placeholder="192.168.84.144:3000"/>
@@ -19,6 +29,7 @@
       <button>
         Сохранить
       </button>
+      <span id="status"></span>
     </div>
   </body>
 
