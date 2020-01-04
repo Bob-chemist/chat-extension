@@ -1,152 +1,223 @@
+import '../user-profile/user-profile.js';
+import '../users-window/users-window.js';
+import '../chat-message/chat-message.js';
+import '../chat-window/chat-window.js';
+import '../chat-box/chat-box.js';
+
 let users = {};
 let me;
-chrome.storage.sync.get(['code'], result => {
-  me = result.code;
-  chrome.runtime.sendMessage({
-    id: 'hi',
-    userId: me,
-  });
-});
 
-const messageInput = document.getElementById('m');
+const messageInput = document.getElementById('m'),
+    // eslint-disable-next-line no-unused-vars
+      port = chrome.runtime.connect();
 
-document.getElementById('userNameId_chat').onclick = event => chooseChat(event);
-document.getElementById('sendbutton').onclick = () => send();
+chrome.storage.sync.get([ 'code' ], (result) => {
+    me = result.code;
 
-messageInput.addEventListener('keydown', function(event) {
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    send();
-  }
+    chrome.runtime.sendMessage({
+        id: 'hi',
+        userId: me,
+    });
 });
 
 chrome.runtime.onMessage.addListener(messageReceived);
 
-function messageReceived(msg) {
-  console.log(msg);
+window.addEventListener('load', () => {
+    chrome.storage.sync.get([ 'authorized' ], (result) => {
+        if (result.authorized) {
+            document.getElementById('sendbutton')
+                .onclick = () => send();
 
-  switch (msg.id) {
-    case 'userList':
-      users = msg.userList;
-      createUserList(users);
-      break;
-    case 'messageList':
-      const { messageList } = msg;
-      messageList.forEach(message => addMessage(message));
-      break;
-    case 'connected':
-      userConnected(msg.userId);
-      break;
-    case 'disconnected':
-      userDisconnected(msg.userId);
-      break;
-    default:
-      break;
-  }
+            messageInput.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    send();
+                }
+            });
+
+            messageInput.addEventListener('keyup', function () {
+                const receiver = document.querySelector('.selected').id.substr('userNameId'.length),
+                      text = messageInput.value;
+
+                localStorage.setItem(receiver, text);
+                chrome.runtime.sendMessage({ id: 'typing', receiver });
+            });
+        } else {
+            document.body.innerHTML = '' +
+                '<div class=\'info\'>' +
+                ' <h3>' +
+                '     Перед началом использования расширения, пожалуйста, укажите данные в ' +
+                ' </h>' +
+                ' <a href=\'../options/options.html\' target=\'_blank\'>настройках</a>' +
+                '</div>';
+        }
+    });
+});
+
+function messageReceived(msg) {
+    console.log(msg);
+
+    switch (msg.id) {
+        case 'userList':
+            users = msg.userList;
+            createUserList(users);
+            break;
+        case 'messageList':
+            for (let i = 0; i < msg.messageList.length; i++) {
+                addMessage(msg.messageList[i]);
+            }
+
+            for (const userId in users) {
+                const unseenUserMessages = JSON.parse(localStorage.getItem('unseenMessages' + userId));
+
+                if (unseenUserMessages) {
+                    document.getElementById('userNameId' + userId);
+
+                    for (let i = 0; i < unseenUserMessages.length; i++) {
+                        addMessage(unseenUserMessages[i]);
+                    }
+                }
+
+            }
+
+            const unseenChatMessages = JSON.parse(localStorage.getItem('unseenMessages_chat'));
+
+            for (let i = 0; i < unseenChatMessages.length; i++) {
+                addMessage(unseenChatMessages[i]);
+            }
+
+            break;
+        case 'singleMessage':
+            addMessage(msg.message[0], 'own');
+            break;
+        case 'connected':
+            userConnected(msg.userId);
+            break;
+        case 'disconnected':
+            userDisconnected(msg.userId);
+            break;
+        case 'typing':
+            addTyping(msg.userId);
+            break;
+    }
 }
 
-const createUserList = userList => {
-  const ul = document.getElementById('users-list'),
-    chat = document.getElementById('chat-window');
+const createUserList = (userList) => {
+    const application = document.getElementById('chat'),
+          chatWindow = document.createElement('chat-window'),
+          usersWindow = document.createElement('users-window');
 
-  for (let userid in userList) {
-    if (document.getElementById('userNameId' + userid)) {
-      continue;
+    application.appendChild(usersWindow);
+    application.appendChild(chatWindow);
+
+    const generalChatBox = document.createElement('chat-box'),
+          generalChatProfile = document.createElement('user-profile');
+
+    generalChatBox.initGeneralChatBox();
+    generalChatProfile.initGeneralChatProfile();
+
+    chatWindow.addChatBoxToList(generalChatBox);
+    usersWindow.addUserProfileToList(generalChatProfile);
+
+    for (const userId in userList) {
+        if (userId === me || document.getElementById('userNameId' + userId)) {
+            continue;
+        }
+
+        const userData = userList[userId],
+              profile = document.createElement('user-profile'),
+              chatBox = document.createElement('chat-box');
+
+        profile.user = userData;
+        chatBox.user = userData;
+
+        chatWindow.addChatBoxToList(chatBox);
+        usersWindow.addUserProfileToList(profile);
     }
-    if (userid === me) continue;
 
-    const { name, connected } = userList[userid];
-    const li = document.createElement('li');
-    li.className = connected ? 'online' : '';
-    li.innerHTML = name;
-    li.id = 'userNameId' + userid;
-    li.onclick = event => chooseChat(event);
-    ul.appendChild(li);
+    const userId = localStorage.getItem('lastChat') ? localStorage.getItem('lastChat') : '_chat',
+          node = document.getElementById('userNameId' + userId);
 
-    const chatWindow = document.createElement('div');
-    chatWindow.id = 'chatId' + userid;
-    chatWindow.className = 'userchat';
-    chatWindow.style.display = 'none';
-    chatWindow.innerHTML =
-      '' +
-      '<h2>' +
-      '' +
-      name +
-      '</h2>' +
-      '<ul id="userChatId' +
-      userid +
-      '"></ul>';
-
-    chat.appendChild(chatWindow);
-  }
+    node.chooseChat({ target: node });
 };
 
 function userConnected(userId) {
-  if (userId === me) {
-    return;
-  }
-  document.getElementById('userNameId' + userId).classList.add('online');
+    if (userId === me) {
+        return;
+    }
+
+    document.getElementById('userNameId' + userId).classList.add('online');
 }
 
 function userDisconnected(userId) {
-  if (userId === me) {
-    return;
-  }
-  document.getElementById('userNameId' + userId).classList.remove('online');
+    if (userId === me) {
+        return;
+    }
+
+    document.getElementById('userNameId' + userId).classList.remove('online');
 }
 
-const addMessage = ({ id, message, author, receiver }) => {
-  const li = document.createElement('li');
-  let date;
+const addMessage = ({ id, message, author, receiver }, type = 'default') => {
+    const chatMessage = document.createElement('chat-message'),
+          date = id
+              ? new Date(+id).toLocaleString()
+              : new Date().toLocaleString(),
+          chatDestination = (receiver === '_chat' || author === me)
+              ? receiver
+              : author;
 
-  if (id) {
-    date = new Date(+id).toLocaleString();
-  } else {
-    date = new Date().toLocaleString();
-  }
+    chatMessage.setMessage(users[author], date, message, author === me);
+    document.getElementById('chatId' + chatDestination).prepend(chatMessage);
 
-  li.innerHTML = users[author].name + ' [' + date + ']: <br>' + message;
-  if (receiver === '_chat') {
-    document.getElementById('userChatId_chat').appendChild(li);
-    document
-      .getElementById('userChatId_chat')
-      .lastChild.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  } else if (author === me) {
-    document.getElementById('userChatId' + receiver).appendChild(li);
-    document
-      .getElementById('userChatId' + receiver)
-      .lastChild.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  } else {
-    document.getElementById('userChatId' + author).appendChild(li);
-    document
-      .getElementById('userChatId' + author)
-      .lastChild.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-  }
-};
-
-const chooseChat = event => {
-  document.querySelector('.selected').classList.remove('selected');
-  event.target.classList.add('selected');
-  let userId = event.target.id.substr('userNameId'.length);
-  Array.from(document.getElementById('chat-window').children).forEach(
-    el => (el.style.display = 'none')
-  );
-  document.getElementById('chatId' + userId).style.display = '';
+    if (type === 'default') {
+        document.getElementById('chatId' + chatDestination).prepend(chatMessage);
+    } else {
+        document.getElementById('chatId' + chatDestination).appendChild(chatMessage);
+        document.getElementById('chatId' + chatDestination)
+            .lastChild.scrollIntoView({ block: 'end', behavior: 'smooth' });
+    }
 };
 
 function send() {
-  const input = document.getElementById('m'),
-    receiver = document
-      .querySelector('.selected')
-      .id.substr('userNameId'.length),
-    message = {
-      author: me,
-      message: input.value,
-      receiver,
-    };
-  chrome.runtime.sendMessage(message);
-  input.value = '';
-  input.focus();
-  message.id = new Date().getTime();
-  addMessage(message);
+    const input = document.getElementById('m'),
+          text = input.value.trim();
+
+    if (text) {
+        const receiver = document.querySelector('.selected')
+            .id.substr('userNameId'.length),
+              message = {
+                  id : 'send',
+                  author: me,
+                  message: text,
+                  receiver,
+              };
+
+        localStorage.removeItem(receiver);
+        chrome.runtime.sendMessage(message);
+        message.id = new Date().getTime();
+        addMessage(message, 'own');
+    }
+
+    input.value = '';
+    input.focus();
+}
+
+let typingTimeout;
+
+function addTyping(userId) {
+    const user_profile = document.getElementById('userNameId' + userId);
+
+    if (!user_profile.classList.contains('typing')) {
+        user_profile.classList.add('typing');
+
+        typingTimeout = setTimeout(() => {
+            user_profile.classList.remove('typing');
+        }, 5000);
+    } else {
+        clearTimeout(typingTimeout);
+
+        typingTimeout = setTimeout(() => {
+            user_profile.classList.remove('typing');
+        }, 5000);
+    }
 }

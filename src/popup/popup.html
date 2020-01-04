@@ -1,32 +1,21 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <title>Socket.IO chat for Bob</title>
+<html lang="ru">
 
-    <link rel="stylesheet" href="popup.css" />
-  </head>
-  <body>
-    <div id="chat" class="chat">
-      <div class="users-window">
-        <h2>Users</h2>
-        <ul id="users-list" class="users-list">
-          <li id="userNameId_chat" class="selected">
-            All
-          </li>
-        </ul>
-      </div>
-      <div id="chat-window" class="chat-window">
-        <div id="chatId_chat">
-          <h2>All</h2>
-          <ul id="userChatId_chat" class="userchat"></ul>
-        </div>
-      </div>
-    </div>
+<head>
+    <title>Чат разработчиков ПФР</title>
+    <meta charset="UTF-8"/>
+    <link rel="stylesheet" href="popup.css"/>
+</head>
 
-    <div class="input">
-      <input id="m" autocomplete="off" />
-      <button id="sendbutton">Send</button>
-    </div>
-    <script src="popup.js"></script>
-  </body>
+<body>
+<div id="chat" class="chat"></div>
+
+<div class="input">
+    <input id="m" autocomplete="off"/>
+    <button id="sendbutton">Отправить</button>
+</div>
+
+<script src="popup.js"></script>
+</body>
+
 </html>

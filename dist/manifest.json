@@ -2,7 +2,7 @@
   "manifest_version": 2,
   "name": "Уведомления",
   "description": "Для разработчиков ПФР портала",
-  "version": "1.0.0",
+  "version": "1.0.8",
   "icons": {
     "128": "icons/icon_128.png"
   },
@@ -14,7 +14,7 @@
     "scripts": [
       "background.js"
     ],
-    "persistent": false
+    "persistent": true
   },
   "commands": {
     "_execute_browser_action": {

@@ -93,7 +93,7 @@
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-eval("document.addEventListener('DOMContentLoaded', function () {\n  document.querySelector('button').addEventListener('click', saveCode);\n  chrome.storage.sync.get('code', function (data) {\n    document.getElementById('code').value = data.code || '';\n  });\n});\n\nfunction saveCode() {\n  var code = document.getElementById('code').value;\n  chrome.storage.sync.set({\n    code: code\n  }, function () {\n    console.log('code is ' + code);\n  });\n}\n\n//# sourceURL=webpack:///./options/options.js?");
+eval("document.addEventListener('DOMContentLoaded', function () {\n  document.querySelector('button').addEventListener('click', saveCode);\n  chrome.storage.sync.get('code', function (data) {\n    document.getElementById('code').value = data.code || '';\n  });\n  chrome.storage.sync.get('ip', function (data) {\n    document.getElementById('ip').value = data.ip || '';\n  });\n});\n\nfunction saveCode() {\n  const code = document.getElementById('code').value,\n        ip = document.getElementById('ip').value;\n  chrome.storage.sync.set({\n    code: code\n  }, function () {\n    console.log('Code is ' + code);\n  });\n  chrome.storage.sync.set({\n    ip: ip\n  }, function () {\n    console.log('Server is ' + ip);\n  });\n}\n\n//# sourceURL=webpack:///./options/options.js?");
 
 /***/ })
 
